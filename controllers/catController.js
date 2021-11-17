@@ -3,7 +3,7 @@
 
 'use strict';
 const { validationResult } = require('express-validator');
-const {getAllCats, getCat, addCat, modifyCat} = require('../models/catModel');
+const {getAllCats, getCat, addCat, modifyCat, deleteCat} = require('../models/catModel');
 const { httpError } = require('../utils/errors');
 
 const cat_list_get = async (req, res, next) => {
@@ -40,6 +40,7 @@ const cat_get = async (req, res, next) => {
 };
 
 const cat_post = async (req, res, next) => {
+  console.log('cat_post', req.body, req.file, req.user);
   const errors = validationResult(req);
     if(!errors.isEmpty()) {
       console.log('cat_post validation', errors.array())
@@ -54,9 +55,8 @@ const cat_post = async (req, res, next) => {
     }
 
   try {
-    console.log(req.body, req.file);
-    const {name, birthdate, weight, owner, } = req.body; 
-    const tulos = await addCat(name, weight, owner, req.file.filename, birthdate, next);
+    const {name, birthdate, weight} = req.body; 
+    const tulos = await addCat(name, weight, req.user.user_id, birthdate, req.file.filename, next);
     if (tulos.affectedRows > 0) {
       res.json({
         message: "cat added",
@@ -72,10 +72,20 @@ const cat_post = async (req, res, next) => {
 };
 
 const cat_put = async (req, res, next) => {
+  console.log('cat_put', req.body, req.params);
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    console.log('cat_put validation', errors.array());
+    next(httpError('invalid data', 400));
+    return;
+  }
   try {
-    console.log('cat_put', req.body);
-    const {name, birthdate, weight, owner, id} = req.body; 
-    const tulos = await modifyCat (name, weight, owner, birthdate, id, next);
+    const {name, birthdate, weight} = req.body; 
+    let owner = req.user.user_id
+    if (req.user.role === 0) {
+      owner = req.body.owner;
+    }
+    const tulos = await modifyCat (name, weight, req.user.user_id, birthdate, req.params.id, next);
     if (tulos.affectedRows > 0) {
       res.json({
         message: "cat modified",
@@ -92,7 +102,7 @@ const cat_put = async (req, res, next) => {
 
 const cat_delete = async (req, res, next) => {
   try {
-    const vastaus = await deleteCat(req.params.id, next);
+    const vastaus = await deleteCat(req.params.id, req.user.user_id, req.user.role, next);
 
     if (vastaus.affectedRows > 0) { 
       res.json({
