@@ -2,6 +2,7 @@
 const passport = require('passport');
 const Strategy = require('passport-local').Strategy;
 const passportJWT = require('passport-jwt');
+const bcrypt = require('bcryptjs');
 const JWTStrategy = passportJWT.Strategy;
 const ExtractJWT = passportJWT.ExtractJwt;
 const { getUserLogin } = require('../models/userModel');
@@ -16,9 +17,11 @@ passport.use(new Strategy(
         if (!user) {
           return done(null, false);
         }
-        if (user.password !== password) {
+        // TODO: use bcrypt to check of passwords don't match
+        if (!bcrypt.compareSync(password, user.password)) {
           return done(null, false);
         }
+        // delete user.password; // remove password propety from user object if it's still there
         return done(null, {...user}, {message: 'Logged In Successfully'}); // use spread syntax to create shallow copy to get rid of binary row type
       } catch (err) {
         return done(err);
